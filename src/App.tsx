@@ -95,9 +95,17 @@ export default function App() {
   latestRecordRef.current = currentRecord;
 
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [printChartModel, setPrintChartModel] = useState<'bar' | 'line'>('bar');
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const handleOpenPrint = (chartModel?: 'bar' | 'line') => {
+    if (chartModel) {
+      setPrintChartModel(chartModel);
+    }
+    setIsPrintModalOpen(true);
+  };
 
   // Show notification toast
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -622,7 +630,7 @@ export default function App() {
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         onExportExcel={handleExportExcel}
         onExportCSV={handleExportCSV}
-        onPrint={() => setIsPrintModalOpen(true)}
+        onPrint={() => handleOpenPrint()}
         onOpenDeleteModal={() => setIsDeleteModalOpen(true)}
         onBackupData={handleBackupData}
         onImportFile={handleImportFile}
@@ -716,7 +724,7 @@ export default function App() {
             yearRecords={yearRecords}
             onExportExcel={handleExportExcel}
             onExportCSV={handleExportCSV}
-            onPrint={() => setIsPrintModalOpen(true)}
+            onPrint={(model) => handleOpenPrint(model)}
             onNavigateToInput={() => setActiveTab('input')}
           />
         )}
@@ -747,6 +755,7 @@ export default function App() {
         record={currentRecord}
         hospital={hospital}
         yearRecords={yearRecords}
+        initialChartModel={printChartModel}
       />
 
       {/* Hospital Identity Settings Modal */}

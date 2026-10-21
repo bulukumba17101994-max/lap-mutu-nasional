@@ -43,7 +43,7 @@ interface ReportSheetProps {
   yearRecords?: Record<number, MonthlyRecord>;
   onExportExcel: () => void;
   onExportCSV: () => void;
-  onPrint: () => void;
+  onPrint: (chartModel?: 'bar' | 'line') => void;
   onNavigateToInput: () => void;
 }
 
@@ -56,6 +56,7 @@ export const ReportSheet: React.FC<ReportSheetProps> = ({
   onPrint,
   onNavigateToInput,
 }) => {
+  const [activeChartModel, setActiveChartModel] = useState<'bar' | 'line'>('bar');
   const [viewTableMode, setViewTableMode] = useState<'periods' | 'monthlyMatrix' | 'ndDetails'>('periods');
   const [filterThreshold, setFilterThreshold] = useState<'all' | 'alertsOnly'>('all');
   const [showAlertDetails, setShowAlertDetails] = useState<boolean>(true);
@@ -114,11 +115,11 @@ export const ReportSheet: React.FC<ReportSheetProps> = ({
             </button>
             <button
               type="button"
-              onClick={onPrint}
+              onClick={() => onPrint(activeChartModel)}
               className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl transition-all cursor-pointer border border-emerald-400/40 shadow-md"
             >
               <Printer className="w-4 h-4" />
-              <span>Cetak Laporan &amp; Grafik</span>
+              <span>Cetak Laporan &amp; Grafik ({activeChartModel === 'bar' ? 'Batang' : 'Garis Tren'})</span>
             </button>
           </div>
         </div>
@@ -353,6 +354,8 @@ export const ReportSheet: React.FC<ReportSheetProps> = ({
         comprehensiveSummary={comprehensive}
         monthName={monthName}
         year={record.year}
+        chartType={activeChartModel}
+        onChartTypeChange={setActiveChartModel}
       />
 
       {/* TABEL REKAPITULASI NILAI RATA-RATA INDIKATOR NASIONAL MUTU (INM) */}

@@ -23,6 +23,8 @@ interface ReportChartProps {
   monthName: string;
   year: number;
   initialScope?: ChartScope;
+  chartType?: 'bar' | 'line';
+  onChartTypeChange?: (type: 'bar' | 'line') => void;
   isPrintMode?: boolean;
 }
 
@@ -32,11 +34,22 @@ export const ReportChart: React.FC<ReportChartProps> = ({
   monthName,
   year,
   initialScope = 'monthly',
+  chartType: externalChartType,
+  onChartTypeChange,
   isPrintMode = false,
 }) => {
   const [scope, setScope] = useState<ChartScope>(initialScope);
   const [selectedTw, setSelectedTw] = useState<'all' | 'tw1' | 'tw2' | 'tw3' | 'tw4'>('all');
-  const [chartType, setChartType] = useState<'bar' | 'line'>('bar');
+  const [internalChartType, setInternalChartType] = useState<'bar' | 'line'>('bar');
+  const chartType = externalChartType !== undefined ? externalChartType : internalChartType;
+
+  const handleSetChartType = (newType: 'bar' | 'line') => {
+    setInternalChartType(newType);
+    if (onChartTypeChange) {
+      onChartTypeChange(newType);
+    }
+  };
+
   const [hoveredId, setHoveredId] = useState<number | null>(null);
 
   // SVG Chart dimensions
@@ -296,7 +309,7 @@ export const ReportChart: React.FC<ReportChartProps> = ({
           <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
             <button
               type="button"
-              onClick={() => setChartType('bar')}
+              onClick={() => handleSetChartType('bar')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 chartType === 'bar' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-600'
               }`}
@@ -306,7 +319,7 @@ export const ReportChart: React.FC<ReportChartProps> = ({
             </button>
             <button
               type="button"
-              onClick={() => setChartType('line')}
+              onClick={() => handleSetChartType('line')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                 chartType === 'line' ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-600'
               }`}
