@@ -1,13 +1,13 @@
 import * as XLSX from 'xlsx';
 import { INDICATORS, MONTH_NAMES, UNITS } from '../data/inmConfig';
 import { HospitalConfig, MonthlyRecord } from '../types/inm';
-import { computeAnnualSummaries, computeMonthlySummaries } from './calculations';
+import { computeAnnualSummaries, computeComprehensiveSummaries, computeMonthlySummaries } from './calculations';
 
 /**
- * Exports monthly and annual records into an Excel workbook.
- * Sheet 1: Rekapitulasi Nilai Rata-Rata Mutu RS (Bulanan & Tahunan)
- * Sheet 2: Rincian Data Per Unit (Matrix 9 units)
- * Sheet 3: Rekapitulasi Tahunan (12 Bulan & Rata-Rata Tahunan)
+ * Exports monthly, quarterly, semester, and annual records into an Excel workbook.
+ * Sheet 1: Rekapitulasi Rata-Rata Mutu (Bulan, TW 1-4, Semester 1-2, Tahunan)
+ * Sheet 2: Matriks 12 Bulan (Januari s/d Desember)
+ * Sheet 3: Rincian Data Per Unit (Matrix 9 units)
  */
 export function exportToExcel(
   record: MonthlyRecord,
@@ -16,59 +16,61 @@ export function exportToExcel(
 ) {
   const summaries = computeMonthlySummaries(record);
   const monthName = MONTH_NAMES[record.month - 1];
-  const annualSummary = computeAnnualSummaries(
+  const comprehensive = computeComprehensiveSummaries(
     record.year,
     yearRecords || { [record.month]: record }
   );
 
   const wb = XLSX.utils.book_new();
 
-  // SHEET 1: REKAPITULASI NILAI RATA-RATA MUTU (BULANAN & TAHUNAN)
+  // SHEET 1: REKAPITULASI NILAI RATA-RATA MUTU (BULAN, TRIWULAN, SEMESTER & TAHUNAN)
   const avgRows: (string | number)[][] = [
     [hospital.name],
     [hospital.subTitle],
     [`LAPORAN REKAPITULASI NILAI RATA-RATA INDIKATOR NASIONAL MUTU (INM)`],
-    [`PERIODE: BULAN ${monthName.toUpperCase()} & REKAP TAHUNAN ${record.year}`],
+    [`PERIODE: BULAN ${monthName.toUpperCase()} & REKAPITULASI TAHUN ${record.year}`],
     [],
     [
       'NO.',
       'INDIKATOR NASIONAL MUTU',
       'STANDAR / TARGET',
-      `RATA-RATA N (${monthName.toUpperCase()})`,
-      `RATA-RATA D (${monthName.toUpperCase()})`,
-      `RATA-RATA BULAN ${monthName.toUpperCase()} (%)`,
-      'STATUS BULANAN',
-      `RATA-RATA PER TAHUN ${record.year} (%)`,
-      'STATUS TAHUNAN',
+      `RATA BULAN ${monthName.toUpperCase()} (%)`,
+      'TW 1 (JAN-MAR) (%)',
+      'TW 2 (APR-JUN) (%)',
+      'TW 3 (JUL-SEP) (%)',
+      'TW 4 (OKT-DES) (%)',
+      'SEMESTER 1 (%)',
+      'SEMESTER 2 (%)',
+      `RATA TAHUN ${record.year} (%)`,
+      'STATUS CAPAIAN TAHUNAN',
     ],
   ];
 
-  summaries.forEach((summary) => {
-    const isMet = summary.isMetAverage;
-    const statusMonthly =
-      isMet === true ? 'TERCAPAI' : isMet === false ? 'BELUM TERCAPAI' : 'BELUM ADA DATA';
+  comprehensive.indicators.forEach((ind) => {
+    const monthlySum = summaries.find((s) => s.id === ind.id);
+    const mVal = monthlySum?.avgPercent !== null && monthlySum?.avgPercent !== undefined
+      ? Number(monthlySum.avgPercent.toFixed(2))
+      : '-';
 
-    const annInd = annualSummary.indicators.find((i) => i.id === summary.id);
-    const annAvgPct =
-      annInd?.annualAvgPercent !== null && annInd?.annualAvgPercent !== undefined
-        ? Number(annInd.annualAvgPercent.toFixed(2))
-        : '-';
     const statusAnnual =
-      annInd?.isMetAnnual === true
+      ind.annual.isMet === true
         ? 'TERCAPAI'
-        : annInd?.isMetAnnual === false
+        : ind.annual.isMet === false
         ? 'BELUM TERCAPAI'
-        : 'BELUM ADA DATA';
+        : 'BELUM LENGKAP';
 
     avgRows.push([
-      summary.id,
-      summary.title,
-      summary.targetLabel,
-      summary.type === 'PERCENT_ONLY' ? '-' : summary.avgNumerator !== null ? Number(summary.avgNumerator.toFixed(2)) : '-',
-      summary.type === 'PERCENT_ONLY' ? '-' : summary.avgDenominator !== null ? Number(summary.avgDenominator.toFixed(2)) : '-',
-      summary.avgPercent !== null ? Number(summary.avgPercent.toFixed(2)) : '-',
-      statusMonthly,
-      annAvgPct,
+      ind.id,
+      ind.title,
+      ind.targetLabel,
+      mVal,
+      ind.tw1.percent !== null ? Number(ind.tw1.percent.toFixed(2)) : '-',
+      ind.tw2.percent !== null ? Number(ind.tw2.percent.toFixed(2)) : '-',
+      ind.tw3.percent !== null ? Number(ind.tw3.percent.toFixed(2)) : '-',
+      ind.tw4.percent !== null ? Number(ind.tw4.percent.toFixed(2)) : '-',
+      ind.s1.percent !== null ? Number(ind.s1.percent.toFixed(2)) : '-',
+      ind.s2.percent !== null ? Number(ind.s2.percent.toFixed(2)) : '-',
+      ind.annual.percent !== null ? Number(ind.annual.percent.toFixed(2)) : '-',
       statusAnnual,
     ]);
   });
@@ -78,15 +80,18 @@ export function exportToExcel(
     { wch: 6 },  // NO
     { wch: 45 }, // INDIKATOR
     { wch: 18 }, // STANDAR
-    { wch: 22 }, // RATA N
-    { wch: 22 }, // RATA D
-    { wch: 26 }, // NILAI RATA % BULANAN
-    { wch: 18 }, // STATUS BULANAN
-    { wch: 26 }, // NILAI RATA % TAHUNAN
-    { wch: 18 }, // STATUS TAHUNAN
+    { wch: 22 }, // BULAN
+    { wch: 20 }, // TW1
+    { wch: 20 }, // TW2
+    { wch: 20 }, // TW3
+    { wch: 20 }, // TW4
+    { wch: 18 }, // S1
+    { wch: 18 }, // S2
+    { wch: 22 }, // TAHUNAN
+    { wch: 22 }, // STATUS
   ];
 
-  XLSX.utils.book_append_sheet(wb, wsAvg, `Rekap_Rata_Rata_INM`);
+  XLSX.utils.book_append_sheet(wb, wsAvg, `Rekap_TW_Semester_INM`);
 
   // SHEET 2: RINCIAN PER UNIT (Lampiran)
   const unitRows: (string | number)[][] = [
@@ -180,18 +185,18 @@ export function exportToExcel(
     ],
   ];
 
-  annualSummary.indicators.forEach((annInd) => {
+  comprehensive.indicators.forEach((annInd) => {
     const monthlyCols = annInd.monthlyPercents.map((pct) =>
       pct !== null && pct !== undefined ? Number(pct.toFixed(2)) : '-'
     );
     const annAvgPct =
-      annInd.annualAvgPercent !== null && annInd.annualAvgPercent !== undefined
-        ? Number(annInd.annualAvgPercent.toFixed(2))
+      annInd.annual.percent !== null && annInd.annual.percent !== undefined
+        ? Number(annInd.annual.percent.toFixed(2))
         : '-';
     const statusAnnual =
-      annInd.isMetAnnual === true
+      annInd.annual.isMet === true
         ? 'TERCAPAI'
-        : annInd.isMetAnnual === false
+        : annInd.annual.isMet === false
         ? 'BELUM TERCAPAI'
         : 'BELUM ADA DATA';
 

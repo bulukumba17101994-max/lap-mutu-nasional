@@ -126,4 +126,54 @@ export interface AnnualReportSummary {
   totalWithData: number;
 }
 
+export interface PeriodSummary {
+  numerator: number | null;
+  denominator: number | null;
+  percent: number | null;
+  isMet: boolean | null;
+  activeMonthsCount: number;
+}
+
+export interface ComprehensiveIndicatorSummary {
+  id: number;
+  title: string;
+  code: string;
+  targetLabel: string;
+  targetValue: number;
+  targetOperator: string;
+  type: IndicatorType;
+  monthlyPercents: (number | null)[]; // 12 months
+  // Triwulan (Quarters)
+  tw1: PeriodSummary; // Jan - Mar
+  tw2: PeriodSummary; // Apr - Jun
+  tw3: PeriodSummary; // Jul - Sep
+  tw4: PeriodSummary; // Okt - Des
+  // Semester
+  s1: PeriodSummary; // Semester 1 (Jan - Jun)
+  s2: PeriodSummary; // Semester 2 (Jul - Des)
+  // Tahunan (Annual)
+  annual: PeriodSummary; // Jan - Des
+  bestMonth?: { month: number; percent: number } | null;
+  lowestMonth?: { month: number; percent: number } | null;
+}
+
+export interface ComprehensiveReportSummary {
+  year: number;
+  indicators: ComprehensiveIndicatorSummary[];
+  overallAnnualComplianceRate: number;
+  overallTwComplianceRates: {
+    tw1: number;
+    tw2: number;
+    tw3: number;
+    tw4: number;
+  };
+  overallSemesterComplianceRates: {
+    s1: number;
+    s2: number;
+  };
+  totalMetAnnual: number;
+  totalNotMetAnnual: number;
+  totalWithDataAnnual: number;
+}
+
 
